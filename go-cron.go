@@ -1,9 +1,8 @@
 package gocron
 
 import (
-	"bytes"
-	//"fmt"
 	"github.com/robfig/cron"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -24,35 +23,54 @@ type LastRun struct {
 }
 
 type CurrentState struct {
-	Running  map[string]LastRun
-	Last     LastRun
+	Running  map[string]*LastRun
+	Last     *LastRun
 	Schedule string
 }
 
-var running_processes = map[string]LastRun{}
 var Current_state CurrentState
+
+func copyOutput(out *string, src io.ReadCloser, pid int) {
+	buf := make([]byte, 1024)
+	for {
+		n, err := src.Read(buf)
+		if n != 0 {
+			s := string(buf[:n])
+			*out = *out + s
+			log.Printf("%d: %v", pid, s)
+		}
+		if err != nil {
+			break
+		}
+	}
+}
 
 func execute(command string, args []string) {
 
 	cmd := exec.Command(command, args...)
 
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	run := LastRun{}
+	run := new(LastRun)
 	run.StartingTime = time.Now().Format(time.RFC3339)
 
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
 	if err := cmd.Start(); err != nil {
 		log.Fatalf("cmd.Start: %v")
 	}
+
 	run.Pid = cmd.Process.Pid
+	Current_state.Running[strconv.Itoa(run.Pid)] = run
+
+	go copyOutput(&run.Stdout, stdout, run.Pid)
+	go copyOutput(&run.Stderr, stderr, run.Pid)
 
 	log.Println(run.Pid, "cmd:", command, strings.Join(args, " "))
-
-	Current_state.Running[strconv.Itoa(run.Pid)] = run
 
 	if err := cmd.Wait(); err != nil {
 		if exiterr, ok := err.(*exec.ExitError); ok {
@@ -68,12 +86,7 @@ func execute(command string, args []string) {
 		}
 	}
 
-	log.Printf("%d stdout: %v", run.Pid, stdout.String())
-	log.Printf("%d stderr: %v", run.Pid, stderr.String())
-
 	run.ExitTime = time.Now().Format(time.RFC3339)
-	run.Stderr = stderr.String()
-	run.Stdout = stdout.String()
 
 	delete(Current_state.Running, strconv.Itoa(run.Pid))
 	run.Pid = 0
@@ -88,7 +101,7 @@ func Create() (cr *cron.Cron, wgr *sync.WaitGroup) {
 	wg := &sync.WaitGroup{}
 
 	c := cron.New()
-	Current_state = CurrentState{map[string]LastRun{}, LastRun{}, schedule}
+	Current_state = CurrentState{map[string]*LastRun{}, &LastRun{}, schedule}
 	log.Println("new cron:", schedule)
 
 	c.AddFunc(schedule, func() {
