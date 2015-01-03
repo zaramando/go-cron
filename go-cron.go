@@ -89,7 +89,7 @@ func execute(command string, args []string) {
 	run.ExitTime = time.Now().Format(time.RFC3339)
 
 	delete(Current_state.Running, strconv.Itoa(run.Pid))
-	run.Pid = 0
+	//run.Pid = 0
 	Current_state.Last = run
 }
 
