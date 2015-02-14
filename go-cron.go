@@ -61,7 +61,7 @@ func execute(command string, args []string) {
 		log.Fatal(err)
 	}
 	if err := cmd.Start(); err != nil {
-		log.Fatalf("cmd.Start: %v")
+		log.Fatalf("cmd.Start: %v", err)
 	}
 
 	run.Pid = cmd.Process.Pid
