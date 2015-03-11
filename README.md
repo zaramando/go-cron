@@ -11,7 +11,7 @@ Additionally the application opens a HTTP port that can be used as a healthcheck
 Check the healthcheck:
 
 ```
-$ curl -v localhost:18080                                                                                                              ⏎ ✱ ◼
+$ curl -v localhost:18080
 * Rebuilt URL to: localhost:18080/
 * Hostname was NOT found in DNS cache
 *   Trying ::1...
