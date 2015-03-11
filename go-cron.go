@@ -93,10 +93,7 @@ func execute(command string, args []string) {
 	Current_state.Last = run
 }
 
-func Create() (cr *cron.Cron, wgr *sync.WaitGroup) {
-	var schedule string = os.Args[1]
-	var command string = os.Args[2]
-	var args []string = os.Args[3:len(os.Args)]
+func Create(schedule string, command string, args []string) (cr *cron.Cron, wgr *sync.WaitGroup) {
 
 	wg := &sync.WaitGroup{}
 
