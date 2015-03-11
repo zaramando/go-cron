@@ -22,9 +22,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-func Http_server() {
+func Http_server(port string) {
+	log.Println("Opening port", port, "for health checking")
 	http.HandleFunc("/", handler)
-	err := http.ListenAndServe(":18080", nil)
+	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
